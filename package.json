@@ -1,0 +1,240 @@
+{
+  "name": "dsh-agent-vscode",
+  "displayName": "DSH Agent — DeepSeek Harness in VS Code",
+  "description": "把 DeepSeek Harness 智能体完整搬进 VS Code：原生 Agent IDE 面板、流式对话、模型切换、免 launch.json 运行与编译、联网搜索、子代理、会话历史与导出。",
+  "version": "0.1.0",
+  "publisher": "deepseek-harness",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/deepseek-ai/deepseek-harness.git"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "AI",
+    "Machine Learning",
+    "Other"
+  ],
+  "keywords": [
+    "agent",
+    "deepseek",
+    "harness",
+    "dsh",
+    "ai",
+    "chat",
+    "acp"
+  ],
+  "activationEvents": [
+    "onView:dshAgent.chatView",
+    "onCommand:dshAgent.focus",
+    "onCommand:dshAgent.askSelection",
+    "onCommand:dshAgent.addFileToContext",
+    "onCommand:dshAgent.runFile",
+    "onCommand:dshAgent.runTask",
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "dshAgent",
+          "title": "DSH Agent",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "dshAgent": [
+        {
+          "type": "webview",
+          "id": "dshAgent.chatView",
+          "name": "DSH Agent",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "commands": [
+      { "command": "dshAgent.focus", "title": "打开 Agent 面板", "category": "DSH Agent", "icon": "media/icon.svg" },
+      { "command": "dshAgent.newSession", "title": "新建会话", "category": "DSH Agent" },
+      { "command": "dshAgent.stop", "title": "停止当前任务", "category": "DSH Agent" },
+      { "command": "dshAgent.changeModel", "title": "切换模型", "category": "DSH Agent" },
+      { "command": "dshAgent.restartRuntime", "title": "重启运行时", "category": "DSH Agent" },
+      { "command": "dshAgent.askSelection", "title": "询问选中代码", "category": "DSH Agent" },
+      { "command": "dshAgent.addFileToContext", "title": "将当前文件加入上下文", "category": "DSH Agent" },
+      { "command": "dshAgent.runFile", "title": "直接运行当前文件（免配置）", "category": "DSH" },
+      { "command": "dshAgent.runTask", "title": "运行任务…", "category": "DSH" },
+      { "command": "dshAgent.exportConversation", "title": "导出会话为 Markdown", "category": "DSH Agent" },
+      { "command": "dshAgent.history", "title": "会话历史", "category": "DSH Agent" },
+      { "command": "dshAgent.openSettings", "title": "打开设置", "category": "DSH Agent" }
+    ],
+    "menus": {
+      "view/title": [
+        { "command": "dshAgent.newSession", "when": "view == dshAgent.chatView", "group": "navigation" },
+        { "command": "dshAgent.history", "when": "view == dshAgent.chatView", "group": "navigation" },
+        { "command": "dshAgent.restartRuntime", "when": "view == dshAgent.chatView", "group": "navigation" }
+      ],
+      "editor/context": [
+        { "command": "dshAgent.askSelection", "when": "editorHasSelection", "group": "DSH@1" },
+        { "command": "dshAgent.addFileToContext", "group": "DSH@2" }
+      ],
+      "editor/title/context": [
+        { "command": "dshAgent.runFile", "group": "DSH@1" }
+      ]
+    },
+    "keybindings": [
+      { "command": "dshAgent.focus", "key": "ctrl+alt+d", "mac": "cmd+alt+d" },
+      { "command": "dshAgent.stop", "key": "ctrl+alt+x", "mac": "cmd+alt+x" }
+    ],
+    "configuration": {
+      "title": "DSH Agent",
+      "properties": {
+        "dshAgent.repoPath": {
+          "type": "string",
+          "default": "",
+          "description": "deepseek-harness 仓库/运行时根目录（需含 packages/examples/jsonrpc-demo）。留空自动探测：当前工作区 → $DSH_REPO_PATH → 常见位置。"
+        },
+        "dshAgent.configPath": {
+          "type": "string",
+          "default": "",
+          "description": "自定义子运行时 cordis.yml 的绝对路径。留空使用内置增强配置（首次启动自动写入 <repo>/.dsh-vscode/cordis.yml）。"
+        },
+        "dshAgent.systemPrompt": {
+          "type": "string",
+          "default": "You are DSH, a powerful coding agent running inside VS Code. Your working directory is {{cwd}}. Use your tools to read, edit, run and verify code. Keep answers factual and concise, and reply in the same language the user writes in.",
+          "description": "智能体人格/系统提示词；{{cwd}} 会替换为工作区路径。修改后重启运行时生效。"
+        },
+        "dshAgent.models": {
+          "type": "array",
+          "default": [
+            { "label": "DeepSeek V4 Flash", "provider": "deepseek-official", "model": "deepseek-v4-flash" },
+            { "label": "DeepSeek V4 Pro", "provider": "deepseek-official", "model": "deepseek-v4-pro" }
+          ],
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string" },
+              "provider": { "type": "string" },
+              "model": { "type": "string" }
+            },
+            "required": ["label", "provider", "model"]
+          },
+          "description": "可选模型列表（provider 路由 + 模型名，来自 dsh-llm-deepseek 适配器）。切换模型会重启运行时。"
+        },
+        "dshAgent.maxTokens": {
+          "type": "integer",
+          "default": 16384,
+          "minimum": 1,
+          "description": "每个请求的最大输出 token 数（SDK initialize.maxTokens）。"
+        },
+        "dshAgent.env": {
+          "type": "object",
+          "default": {},
+          "additionalProperties": { "type": "string" },
+          "description": "注入给子运行时的额外环境变量（如 DEEPSEEK_BASE_URL、HTTP_PROXY）。默认继承当前环境，并通过 ~/.dsh/.credentials.yaml 复用 DeepSeek 凭据。"
+        },
+        "dshAgent.runtimeCommand": {
+          "type": "string",
+          "default": "node",
+          "description": "启动子运行时的可执行文件。"
+        },
+        "dshAgent.runtimeArgs": {
+          "type": "array",
+          "default": [],
+          "items": { "type": "string" },
+          "description": "追加到默认启动参数之后的自定义参数。"
+        },
+        "dshAgent.autoRestart": {
+          "type": "boolean",
+          "default": true,
+          "description": "运行时意外退出后自动重启。"
+        },
+        "dshAgent.sessionRoot": {
+          "type": "string",
+          "default": "",
+          "description": "会话日志持久化目录；留空使用扩展全局存储。"
+        }
+      }
+    },
+    "problemMatchers": [
+      {
+        "name": "$dsh-gcc",
+        "label": "DSH: GCC/Clang/Java 编译器输出",
+        "owner": "dsh-gcc",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "^(.*?):(\\d+):(\\d+):\\s+(error|warning|note):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      },
+      {
+        "name": "$dsh-tsc",
+        "label": "DSH: TypeScript 编译输出",
+        "owner": "dsh-tsc",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "^(.*)\\((\\d+),(\\d+)\\):\\s+(error|warning)\\s+TS\\d+:\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      },
+      {
+        "name": "$dsh-python",
+        "label": "DSH: Python 回溯",
+        "owner": "dsh-python",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "severity": "error",
+        "pattern": {
+          "regexp": "^\\s*File \\\"(.*)\\\", line (\\d+).*$",
+          "file": 1,
+          "line": 2
+        }
+      },
+      {
+        "name": "$dsh-generic",
+        "label": "DSH: 通用 文件:行:列 输出",
+        "owner": "dsh-generic",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "^(.*?):(\\d+):(\\d+):\\s+(error|warning):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "dsh-runner",
+        "required": [],
+        "properties": {
+          "task": { "type": "string", "description": "任务名称" }
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.2.0",
+    "typescript": "^5.5.0"
+  }
+}
